@@ -41,6 +41,3 @@ const PurchaseCancelPage = () => {
 };
 
 export default PurchaseCancelPage;
-
-
-ddfhbdfbhd

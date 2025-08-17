@@ -5,121 +5,113 @@ import { MoveRight } from "lucide-react";
 import axios from "../lib/axios";
 
 const OrderSummary = () => {
-  const { total, subtotal, coupon, isCouponApplied, cart } = useCartStore();
+	const { total, subtotal, coupon, isCouponApplied, cart } = useCartStore();
 
-  const savings = subtotal - total;
-  const formattedSubtotal = subtotal.toFixed(2);
-  const formattedTotal = total.toFixed(2);
-  const formattedSavings = savings.toFixed(2);
+	const savings = subtotal - total;
+	const formattedSubtotal = subtotal.toFixed(2);
+	const formattedTotal = total.toFixed(2);
+	const formattedSavings = savings.toFixed(2);
 
-  const handlePayment = async () => {
-    try {
-      // 1️⃣ Request Razorpay order from backend
-      const { data } = await axios.post("/payments/create-order", {
-        products: cart,
-        couponCode: coupon ? coupon.code : null,
-      });
+	const handlePayment = async () => {
+		try {
+			// 1. Create an order on your backend
+			const res = await axios.post("/payments/create-order", {
+				products: cart,
+				couponCode: coupon ? coupon.code : null,
+			});
 
-      const options = {
-        key: import.meta.env.VITE_RAZORPAY_KEY_ID, // public key from env
-        amount: data.amount, // amount in paise (backend should send this)
-        currency: "INR",
-        name: "BuyBuddy",
-        description: "Order Payment",
-        order_id: data.id, // Razorpay order ID
-        handler: async function (response) {
-          // 2️⃣ Verify payment on backend
-          await axios.post("/payments/verify", {
-            razorpay_order_id: response.razorpay_order_id,
-            razorpay_payment_id: response.razorpay_payment_id,
-            razorpay_signature: response.razorpay_signature,
-          });
-          alert("Payment successful!");
-        },
-        prefill: {
-          name: "Customer Name",
-          email: "customer@example.com",
-          contact: "9999999999",
-        },
-        theme: {
-          color: "#10B981",
-        },
-      };
+			const { id: order_id, amount, currency } = res.data;
 
-      const razorpay = new window.Razorpay(options);
-      razorpay.open();
-    } catch (error) {
-      console.error("Payment error:", error);
-    }
-  };
+			// 2. Initialize Razorpay
+			const options = {
+				key: import.meta.env.VITE_RAZORPAY_KEY_ID, // Store in .env file
+				amount: amount.toString(),
+				currency: currency,
+				name: "BuyBuddy",
+				description: "Order Payment",
+				order_id,
+				handler: async function (response) {
+					// Send payment verification details to backend
+					await axios.post("/payments/verify-payment", {
+						razorpay_payment_id: response.razorpay_payment_id,
+						razorpay_order_id: response.razorpay_order_id,
+						razorpay_signature: response.razorpay_signature,
+					});
+					alert("Payment Successful!");
+				},
+				prefill: {
+					name: "Your Customer",
+					email: "customer@example.com",
+					contact: "9999999999",
+				},
+				theme: {
+					color: "#10B981", // emerald color
+				},
+			};
 
-  return (
-    <motion.div
-      className="space-y-4 rounded-lg border border-gray-700 bg-gray-800 p-4 shadow-sm sm:p-6"
-      initial={{ opacity: 0, y: 20 }}
-      animate={{ opacity: 1, y: 0 }}
-      transition={{ duration: 0.5 }}
-    >
-      <p className="text-xl font-semibold text-emerald-400">Order summary</p>
+			const razor = new window.Razorpay(options);
+			razor.open();
+		} catch (error) {
+			console.error("Payment Error:", error);
+		}
+	};
 
-      <div className="space-y-4">
-        <div className="space-y-2">
-          <dl className="flex items-center justify-between gap-4">
-            <dt className="text-base font-normal text-gray-300">Original price</dt>
-            <dd className="text-base font-medium text-white">
-              ₹{formattedSubtotal}
-            </dd>
-          </dl>
+	return (
+		<motion.div
+			className='space-y-4 rounded-lg border border-gray-700 bg-gray-800 p-4 shadow-sm sm:p-6'
+			initial={{ opacity: 0, y: 20 }}
+			animate={{ opacity: 1, y: 0 }}
+			transition={{ duration: 0.5 }}
+		>
+			<p className='text-xl font-semibold text-emerald-400'>Order summary</p>
 
-          {savings > 0 && (
-            <dl className="flex items-center justify-between gap-4">
-              <dt className="text-base font-normal text-gray-300">Savings</dt>
-              <dd className="text-base font-medium text-emerald-400">
-                -₹{formattedSavings}
-              </dd>
-            </dl>
-          )}
+			<div className='space-y-4'>
+				<div className='space-y-2'>
+					<dl className='flex items-center justify-between gap-4'>
+						<dt className='text-base font-normal text-gray-300'>Original price</dt>
+						<dd className='text-base font-medium text-white'>${formattedSubtotal}</dd>
+					</dl>
 
-          {coupon && isCouponApplied && (
-            <dl className="flex items-center justify-between gap-4">
-              <dt className="text-base font-normal text-gray-300">
-                Coupon ({coupon.code})
-              </dt>
-              <dd className="text-base font-medium text-emerald-400">
-                -{coupon.discountPercentage}%
-              </dd>
-            </dl>
-          )}
-          <dl className="flex items-center justify-between gap-4 border-t border-gray-600 pt-2">
-            <dt className="text-base font-bold text-white">Total</dt>
-            <dd className="text-base font-bold text-emerald-400">
-              ₹{formattedTotal}
-            </dd>
-          </dl>
-        </div>
+					{savings > 0 && (
+						<dl className='flex items-center justify-between gap-4'>
+							<dt className='text-base font-normal text-gray-300'>Savings</dt>
+							<dd className='text-base font-medium text-emerald-400'>-${formattedSavings}</dd>
+						</dl>
+					)}
 
-        <motion.button
-          className="flex w-full items-center justify-center rounded-lg bg-emerald-600 px-5 py-2.5 text-sm font-medium text-white hover:bg-emerald-700 focus:outline-none focus:ring-4 focus:ring-emerald-300"
-          whileHover={{ scale: 1.05 }}
-          whileTap={{ scale: 0.95 }}
-          onClick={handlePayment}
-        >
-          Proceed to Checkout
-        </motion.button>
+					{coupon && isCouponApplied && (
+						<dl className='flex items-center justify-between gap-4'>
+							<dt className='text-base font-normal text-gray-300'>Coupon ({coupon.code})</dt>
+							<dd className='text-base font-medium text-emerald-400'>-{coupon.discountPercentage}%</dd>
+						</dl>
+					)}
+					<dl className='flex items-center justify-between gap-4 border-t border-gray-600 pt-2'>
+						<dt className='text-base font-bold text-white'>Total</dt>
+						<dd className='text-base font-bold text-emerald-400'>${formattedTotal}</dd>
+					</dl>
+				</div>
 
-        <div className="flex items-center justify-center gap-2">
-          <span className="text-sm font-normal text-gray-400">or</span>
-          <Link
-            to="/"
-            className="inline-flex items-center gap-2 text-sm font-medium text-emerald-400 underline hover:text-emerald-300 hover:no-underline"
-          >
-            Continue Shopping
-            <MoveRight size={16} />
-          </Link>
-        </div>
-      </div>
-    </motion.div>
-  );
+				<motion.button
+					className='flex w-full items-center justify-center rounded-lg bg-emerald-600 px-5 py-2.5 text-sm font-medium text-white hover:bg-emerald-700 focus:outline-none focus:ring-4 focus:ring-emerald-300'
+					whileHover={{ scale: 1.05 }}
+					whileTap={{ scale: 0.95 }}
+					onClick={handlePayment}
+				>
+					Proceed to Checkout
+				</motion.button>
+
+				<div className='flex items-center justify-center gap-2'>
+					<span className='text-sm font-normal text-gray-400'>or</span>
+					<Link
+						to='/'
+						className='inline-flex items-center gap-2 text-sm font-medium text-emerald-400 underline hover:text-emerald-300 hover:no-underline'
+					>
+						Continue Shopping
+						<MoveRight size={16} />
+					</Link>
+				</div>
+			</div>
+		</motion.div>
+	);
 };
-
 export default OrderSummary;

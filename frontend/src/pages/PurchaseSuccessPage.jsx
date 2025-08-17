@@ -97,5 +97,3 @@ const PurchaseSuccessPage = () => {
 	);
 };
 export default PurchaseSuccessPage;
-fmekfemkf
-evev
