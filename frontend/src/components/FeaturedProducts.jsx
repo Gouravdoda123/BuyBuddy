@@ -8,6 +8,15 @@ const FeaturedProducts = ({ featuredProducts }) => {
 
 	const { addToCart } = useCartStore();
 
+	// ✅ Normalize to always be an array, regardless of API shape
+	const safeProducts = Array.isArray(featuredProducts)
+		? featuredProducts
+		: Array.isArray(featuredProducts?.data)
+		? featuredProducts.data
+		: Array.isArray(featuredProducts?.featuredProducts)
+		? featuredProducts.featuredProducts
+		: [];
+
 	useEffect(() => {
 		const handleResize = () => {
 			if (window.innerWidth < 640) setItemsPerPage(1);
@@ -29,8 +38,9 @@ const FeaturedProducts = ({ featuredProducts }) => {
 		setCurrentIndex((prevIndex) => prevIndex - itemsPerPage);
 	};
 
+	const total = safeProducts.length || 0;
 	const isStartDisabled = currentIndex === 0;
-	const isEndDisabled = currentIndex >= featuredProducts.length - itemsPerPage;
+	const isEndDisabled = currentIndex >= Math.max(0, total - itemsPerPage);
 
 	return (
 		<div className='py-12'>
@@ -42,20 +52,20 @@ const FeaturedProducts = ({ featuredProducts }) => {
 							className='flex transition-transform duration-300 ease-in-out'
 							style={{ transform: `translateX(-${currentIndex * (100 / itemsPerPage)}%)` }}
 						>
-							{featuredProducts?.map((product) => (
-								<div key={product._id} className='w-full sm:w-1/2 lg:w-1/3 xl:w-1/4 flex-shrink-0 px-2'>
+							{safeProducts.map((product) => (
+								<div key={product?._id ?? Math.random()} className='w-full sm:w-1/2 lg:w-1/3 xl:w-1/4 flex-shrink-0 px-2'>
 									<div className='bg-white bg-opacity-10 backdrop-blur-sm rounded-lg shadow-lg overflow-hidden h-full transition-all duration-300 hover:shadow-xl border border-emerald-500/30'>
 										<div className='overflow-hidden'>
 											<img
-												src={product.image}
-												alt={product.name}
+												src={product?.image || "/placeholder.png"}
+												alt={product?.name || "Product"}
 												className='w-full h-48 object-cover transition-transform duration-300 ease-in-out hover:scale-110'
 											/>
 										</div>
 										<div className='p-4'>
-											<h3 className='text-lg font-semibold mb-2 text-white'>{product.name}</h3>
+											<h3 className='text-lg font-semibold mb-2 text-white'>{product?.name || "Unnamed product"}</h3>
 											<p className='text-emerald-300 font-medium mb-4'>
-												${product.price.toFixed(2)}
+												${Number(product?.price ?? 0).toFixed(2)}
 											</p>
 											<button
 												onClick={() => addToCart(product)}

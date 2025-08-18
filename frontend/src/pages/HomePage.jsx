@@ -7,7 +7,7 @@ const categories = [
 	{ href: "/jeans", name: "Jeans", imageUrl: "/jeans.jpg" },
 	{ href: "/t-shirts", name: "T-shirts", imageUrl: "/tshirts.jpg" },
 	{ href: "/shoes", name: "Shoes", imageUrl: "/shoes.jpg" },
-	{ href: "/glasses", name: "Glasses", imageUrl: "/glasses.png" },
+	{ href: "/glasses", name: "Glasses", imageUrl: "/glasses.jpg" },
 	{ href: "/jackets", name: "Jackets", imageUrl: "/jackets.jpg" },
 	{ href: "/suits", name: "Suits", imageUrl: "/suits.jpg" },
 	{ href: "/bags", name: "Bags", imageUrl: "/bags.jpg" },
@@ -19,6 +19,9 @@ const HomePage = () => {
 	useEffect(() => {
 		fetchFeaturedProducts();
 	}, [fetchFeaturedProducts]);
+
+	// ✅ ensure products is always an array
+	const productList = Array.isArray(products) ? products : [];
 
 	return (
 		<div className='relative min-h-screen text-white overflow-hidden'>
@@ -36,9 +39,12 @@ const HomePage = () => {
 					))}
 				</div>
 
-				{!isLoading && products.length > 0 && <FeaturedProducts featuredProducts={products} />}
+				{!isLoading && productList.length > 0 && (
+					<FeaturedProducts featuredProducts={productList} />
+				)}
 			</div>
 		</div>
 	);
 };
+
 export default HomePage;
