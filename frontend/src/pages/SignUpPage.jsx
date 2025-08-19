@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { Link } from "react-router-dom";
-import { UserPlus, Mail, Lock, User, ArrowRight, Loader } from "lucide-react";
+import { UserPlus, Mail, Lock, User, ArrowRight, Loader, Check } from "lucide-react";
 import { motion } from "framer-motion";
 import { useUserStore } from "../stores/useUserStore";
 
@@ -10,12 +10,17 @@ const SignUpPage = () => {
 		email: "",
 		password: "",
 		confirmPassword: "",
+		acceptTerms: false,
 	});
 
 	const { signup, loading } = useUserStore();
 
 	const handleSubmit = (e) => {
 		e.preventDefault();
+		if (!formData.acceptTerms) {
+			alert("Please accept the terms and conditions to continue.");
+			return;
+		}
 		signup(formData);
 	};
 
@@ -121,6 +126,31 @@ const SignUpPage = () => {
 									 border-gray-600 rounded-md shadow-sm placeholder-gray-400 focus:outline-none focus:ring-emerald-500 focus:border-emerald-500 sm:text-sm'
 									placeholder='••••••••'
 								/>
+							</div>
+						</div>
+
+						<div className='flex items-start'>
+							<div className='flex items-center h-5'>
+								<input
+									id='acceptTerms'
+									type='checkbox'
+									required
+									checked={formData.acceptTerms}
+									onChange={(e) => setFormData({ ...formData, acceptTerms: e.target.checked })}
+									className='h-4 w-4 text-emerald-600 focus:ring-emerald-500 border-gray-600 rounded bg-gray-700'
+								/>
+							</div>
+							<div className='ml-3 text-sm'>
+								<label htmlFor='acceptTerms' className='text-gray-300'>
+									I agree to the{" "}
+									<Link to='/terms' className='text-emerald-400 hover:text-emerald-300 underline'>
+										Terms and Conditions
+									</Link>{" "}
+									and{" "}
+									<Link to='/privacy' className='text-emerald-400 hover:text-emerald-300 underline'>
+										Privacy Policy
+									</Link>
+								</label>
 							</div>
 						</div>
 

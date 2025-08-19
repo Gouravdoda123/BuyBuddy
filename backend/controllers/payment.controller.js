@@ -50,7 +50,12 @@ export const createCheckoutSession = async (req, res) => {
 			await createNewCoupon(req.user._id);
 		}
 
-		res.status(200).json({ orderId: order.id, totalAmount: totalAmount / 100 });
+		// ✅ Return in the format frontend expects
+		res.status(200).json({
+			id: order.id,
+			amount: order.amount,
+			currency: order.currency,
+		});
 	} catch (error) {
 		console.error("Error processing checkout:", error);
 		res.status(500).json({ message: "Error processing checkout", error: error.message });
@@ -71,10 +76,8 @@ export const checkoutSuccess = async (req, res) => {
 			return res.status(400).json({ message: "Invalid signature, payment verification failed" });
 		}
 
-		// Get order details from Razorpay
 		const order = await razorpay.orders.fetch(razorpay_order_id);
 
-		// Deactivate coupon if used
 		if (order.notes && order.notes.couponCode) {
 			await Coupon.findOneAndUpdate(
 				{
@@ -87,7 +90,6 @@ export const checkoutSuccess = async (req, res) => {
 			);
 		}
 
-		// Create a new Order in DB
 		const products = JSON.parse(order.notes.products);
 		const newOrder = new Order({
 			user: order.notes.userId,
@@ -96,9 +98,10 @@ export const checkoutSuccess = async (req, res) => {
 				quantity: product.quantity,
 				price: product.price,
 			})),
-			totalAmount: order.amount / 100, // convert from paise to INR
+			totalAmount: order.amount / 100,
 			razorpayOrderId: razorpay_order_id,
 			razorpayPaymentId: razorpay_payment_id,
+			razorpaySignature: razorpay_signature, // ✅ fix 500 error
 		});
 
 		await newOrder.save();
@@ -113,6 +116,7 @@ export const checkoutSuccess = async (req, res) => {
 		res.status(500).json({ message: "Error processing successful checkout", error: error.message });
 	}
 };
+
 
 async function createNewCoupon(userId) {
 	await Coupon.findOneAndDelete({ userId });

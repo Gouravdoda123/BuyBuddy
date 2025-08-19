@@ -4,7 +4,10 @@ import { checkoutSuccess, createCheckoutSession } from "../controllers/payment.c
 
 const router = express.Router();
 
-router.post("/create-checkout-session", protectRoute, createCheckoutSession);
-router.post("/checkout-success", protectRoute, checkoutSuccess);
+// Create Razorpay order (frontend expects /payments/create-order)
+router.post("/create-order", protectRoute, createCheckoutSession);
+
+// Verify Razorpay payment (frontend expects /payments/verify-payment)
+router.post("/verify-payment", protectRoute, checkoutSuccess);
 
 export default router;

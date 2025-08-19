@@ -1,11 +1,12 @@
 import { motion } from "framer-motion";
 import { useCartStore } from "../stores/useCartStore";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { MoveRight } from "lucide-react";
 import axios from "../lib/axios";
 
 const OrderSummary = () => {
-	const { total, subtotal, coupon, isCouponApplied, cart } = useCartStore();
+	const { total, subtotal, coupon, isCouponApplied, cart, clearCart } = useCartStore();
+	const navigate = useNavigate();
 
 	const savings = subtotal - total;
 	const formattedSubtotal = subtotal.toFixed(2);
@@ -18,26 +19,35 @@ const OrderSummary = () => {
 			const res = await axios.post("/payments/create-order", {
 				products: cart,
 				couponCode: coupon ? coupon.code : null,
-			});
+			}, { withCredentials: true });
 
 			const { id: order_id, amount, currency } = res.data;
 
 			// 2. Initialize Razorpay
 			const options = {
-				key: import.meta.env.VITE_RAZORPAY_KEY_ID, // Store in .env file
+				key: import.meta.env.VITE_RAZORPAY_KEY_ID,
 				amount: amount.toString(),
 				currency: currency,
 				name: "BuyBuddy",
 				description: "Order Payment",
 				order_id,
 				handler: async function (response) {
-					// Send payment verification details to backend
-					await axios.post("/payments/verify-payment", {
-						razorpay_payment_id: response.razorpay_payment_id,
-						razorpay_order_id: response.razorpay_order_id,
-						razorpay_signature: response.razorpay_signature,
-					});
-					alert("Payment Successful!");
+					try {
+						const verifyRes = await axios.post("/payments/verify-payment", {
+							razorpay_payment_id: response.razorpay_payment_id,
+							razorpay_order_id: response.razorpay_order_id,
+							razorpay_signature: response.razorpay_signature,
+						}, { withCredentials: true });
+
+						if (verifyRes.data.success) {
+							clearCart();
+							navigate("/purchase-success");
+						}
+					} catch (err) {
+						console.error("Payment verification failed:", err);
+						alert("Payment verification failed. Please contact support.");
+						navigate("/purchase-cancel");
+					}
 				},
 				prefill: {
 					name: "Your Customer",
@@ -45,14 +55,23 @@ const OrderSummary = () => {
 					contact: "9999999999",
 				},
 				theme: {
-					color: "#10B981", // emerald color
+					color: "#10B981",
+				},
+				modal: {
+					ondismiss: function () {
+						navigate("/purchase-cancel");
+					},
 				},
 			};
 
 			const razor = new window.Razorpay(options);
+			razor.on("payment.failed", function () {
+				navigate("/purchase-cancel");
+			});
 			razor.open();
 		} catch (error) {
 			console.error("Payment Error:", error);
+			alert("Payment failed. Please try again.");
 		}
 	};
 
@@ -69,13 +88,13 @@ const OrderSummary = () => {
 				<div className='space-y-2'>
 					<dl className='flex items-center justify-between gap-4'>
 						<dt className='text-base font-normal text-gray-300'>Original price</dt>
-						<dd className='text-base font-medium text-white'>${formattedSubtotal}</dd>
+						<dd className='text-base font-medium text-white'>₹{formattedSubtotal}</dd>
 					</dl>
 
 					{savings > 0 && (
 						<dl className='flex items-center justify-between gap-4'>
 							<dt className='text-base font-normal text-gray-300'>Savings</dt>
-							<dd className='text-base font-medium text-emerald-400'>-${formattedSavings}</dd>
+							<dd className='text-base font-medium text-emerald-400'>-₹{formattedSavings}</dd>
 						</dl>
 					)}
 
@@ -87,7 +106,7 @@ const OrderSummary = () => {
 					)}
 					<dl className='flex items-center justify-between gap-4 border-t border-gray-600 pt-2'>
 						<dt className='text-base font-bold text-white'>Total</dt>
-						<dd className='text-base font-bold text-emerald-400'>${formattedTotal}</dd>
+						<dd className='text-base font-bold text-emerald-400'>₹{formattedTotal}</dd>
 					</dl>
 				</div>
 
@@ -114,4 +133,5 @@ const OrderSummary = () => {
 		</motion.div>
 	);
 };
+
 export default OrderSummary;

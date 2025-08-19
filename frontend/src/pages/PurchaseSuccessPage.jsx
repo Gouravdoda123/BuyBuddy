@@ -2,40 +2,19 @@ import { ArrowRight, CheckCircle, HandHeart } from "lucide-react";
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { useCartStore } from "../stores/useCartStore";
-import axios from "../lib/axios";
 import Confetti from "react-confetti";
 
 const PurchaseSuccessPage = () => {
-	const [isProcessing, setIsProcessing] = useState(true);
 	const { clearCart } = useCartStore();
-	const [error, setError] = useState(null);
+	const [isProcessing, setIsProcessing] = useState(true);
 
 	useEffect(() => {
-		const handleCheckoutSuccess = async (sessionId) => {
-			try {
-				await axios.post("/payments/checkout-success", {
-					sessionId,
-				});
-				clearCart();
-			} catch (error) {
-				console.log(error);
-			} finally {
-				setIsProcessing(false);
-			}
-		};
-
-		const sessionId = new URLSearchParams(window.location.search).get("session_id");
-		if (sessionId) {
-			handleCheckoutSuccess(sessionId);
-		} else {
-			setIsProcessing(false);
-			setError("No session ID found in the URL");
-		}
+		// Clear the cart immediately (Razorpay payment is already verified)
+		clearCart();
+		setIsProcessing(false);
 	}, [clearCart]);
 
 	if (isProcessing) return "Processing...";
-
-	if (error) return `Error: ${error}`;
 
 	return (
 		<div className='h-screen flex items-center justify-center px-4'>
@@ -74,6 +53,25 @@ const PurchaseSuccessPage = () => {
 						</div>
 					</div>
 
+					{/* Policy Links */}
+					<div className='bg-gray-700 rounded-lg p-4 mb-6'>
+						<h3 className='text-sm font-medium text-white mb-3 text-center'>Important Information</h3>
+						<div className='space-y-2'>
+							<Link
+								to='/shipping-policy'
+								className='block text-sm text-emerald-400 hover:text-emerald-300 text-center transition-colors'
+							>
+								📦 Shipping Policy & Delivery Times
+							</Link>
+							<Link
+								to='/cancellation-refund'
+								className='block text-sm text-emerald-400 hover:text-emerald-300 text-center transition-colors'
+							>
+								🔄 Cancellation & Refund Policy
+							</Link>
+						</div>
+					</div>
+
 					<div className='space-y-4'>
 						<button
 							className='w-full bg-emerald-600 hover:bg-emerald-700 text-white font-bold py-2 px-4
@@ -96,4 +94,5 @@ const PurchaseSuccessPage = () => {
 		</div>
 	);
 };
+
 export default PurchaseSuccessPage;
