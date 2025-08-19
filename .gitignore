@@ -15,3 +15,8 @@ Thumbs.db
 # IDE folders
 .vscode/
 .idea/
+
+
+dist
+dist-ssr
+*.local
