@@ -2,48 +2,51 @@ import { redis } from "../lib/redis.js";
 import User from "../models/user.model.js";
 import jwt from "jsonwebtoken";
 
+// Generate access & refresh tokens
 const generateTokens = (userId) => {
 	const accessToken = jwt.sign({ userId }, process.env.ACCESS_TOKEN_SECRET, {
 		expiresIn: "15m",
 	});
-
 	const refreshToken = jwt.sign({ userId }, process.env.REFRESH_TOKEN_SECRET, {
 		expiresIn: "7d",
 	});
-
 	return { accessToken, refreshToken };
 };
 
+// Store refresh token in Redis
 const storeRefreshToken = async (userId, refreshToken) => {
-	await redis.set(`refresh_token:${userId}`, refreshToken, "EX", 7 * 24 * 60 * 60); // 7days
+	await redis.set(`refresh_token:${userId}`, refreshToken, "EX", 7 * 24 * 60 * 60); // 7 days
 };
 
+// Set cookies for frontend
 const setCookies = (res, accessToken, refreshToken) => {
-	res.cookie("accessToken", accessToken, {
-		httpOnly: true, // prevent XSS attacks, cross site scripting attack
+	const cookieOptions = {
+		httpOnly: true,
 		secure: process.env.NODE_ENV === "production",
-		sameSite: "strict", // prevents CSRF attack, cross-site request forgery attack
+		sameSite: process.env.NODE_ENV === "production" ? "none" : "lax",
+	};
+
+	res.cookie("accessToken", accessToken, {
+		...cookieOptions,
 		maxAge: 15 * 60 * 1000, // 15 minutes
 	});
 	res.cookie("refreshToken", refreshToken, {
-		httpOnly: true, // prevent XSS attacks, cross site scripting attack
-		secure: process.env.NODE_ENV === "production",
-		sameSite: "strict", // prevents CSRF attack, cross-site request forgery attack
+		...cookieOptions,
 		maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
 	});
 };
 
+// Signup controller
 export const signup = async (req, res) => {
 	const { email, password, name } = req.body;
 	try {
 		const userExists = await User.findOne({ email });
-
 		if (userExists) {
 			return res.status(400).json({ message: "User already exists" });
 		}
+
 		const user = await User.create({ name, email, password });
 
-		// authenticate
 		const { accessToken, refreshToken } = generateTokens(user._id);
 		await storeRefreshToken(user._id, refreshToken);
 
@@ -61,6 +64,7 @@ export const signup = async (req, res) => {
 	}
 };
 
+// Login controller
 export const login = async (req, res) => {
 	try {
 		const { email, password } = req.body;
@@ -86,6 +90,7 @@ export const login = async (req, res) => {
 	}
 };
 
+// Logout controller
 export const logout = async (req, res) => {
 	try {
 		const refreshToken = req.cookies.refreshToken;
@@ -94,8 +99,9 @@ export const logout = async (req, res) => {
 			await redis.del(`refresh_token:${decoded.userId}`);
 		}
 
-		res.clearCookie("accessToken");
-		res.clearCookie("refreshToken");
+		res.clearCookie("accessToken", { httpOnly: true, sameSite: "lax" });
+		res.clearCookie("refreshToken", { httpOnly: true, sameSite: "lax" });
+
 		res.json({ message: "Logged out successfully" });
 	} catch (error) {
 		console.log("Error in logout controller", error.message);
@@ -103,11 +109,10 @@ export const logout = async (req, res) => {
 	}
 };
 
-// this will refresh the access token
+// Refresh access token controller
 export const refreshToken = async (req, res) => {
 	try {
 		const refreshToken = req.cookies.refreshToken;
-
 		if (!refreshToken) {
 			return res.status(401).json({ message: "No refresh token provided" });
 		}
@@ -124,7 +129,7 @@ export const refreshToken = async (req, res) => {
 		res.cookie("accessToken", accessToken, {
 			httpOnly: true,
 			secure: process.env.NODE_ENV === "production",
-			sameSite: "strict",
+			sameSite: process.env.NODE_ENV === "production" ? "none" : "lax",
 			maxAge: 15 * 60 * 1000,
 		});
 
@@ -135,6 +140,7 @@ export const refreshToken = async (req, res) => {
 	}
 };
 
+// Get profile controller
 export const getProfile = async (req, res) => {
 	try {
 		res.json(req.user);
