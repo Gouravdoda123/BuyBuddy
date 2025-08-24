@@ -1,7 +1,6 @@
 import express from "express";
 import dotenv from "dotenv";
 import cookieParser from "cookie-parser";
-import path from "path"; // keep if needed for other things
 import cors from "cors";
 
 import authRoutes from "./routes/auth.route.js";
@@ -18,20 +17,20 @@ dotenv.config();
 const app = express();
 const PORT = process.env.PORT || 5000;
 
-// const __dirname = path.resolve(); // ❌ not needed anymore
-
+// Middleware
 app.use(express.json({ limit: "10mb" }));
 app.use(cookieParser());
 
+// CORS configuration for frontend + localhost during dev
+const FRONTEND_URL = process.env.FRONTEND_URL || "http://localhost:5173";
 app.use(
   cors({
-    origin: ["http://localhost:5173", "https://buy-buddy-neon.vercel.app"],
-    credentials: true,
+    origin: FRONTEND_URL,
+    credentials: true, // required to send cookies cross-origin
   })
 );
 
-
-// API Routes
+// Routes
 app.use("/api/auth", authRoutes);
 app.use("/api/products", productRoutes);
 app.use("/api/cart", cartRoutes);
@@ -39,15 +38,8 @@ app.use("/api/coupons", couponRoutes);
 app.use("/api/payments", paymentRoutes);
 app.use("/api/analytics", analyticsRoutes);
 
-// ❌ Remove serving frontend - handled by Vercel
-// if (process.env.NODE_ENV === "production") {
-//   app.use(express.static(path.join(__dirname, "/frontend/dist")));
-//   app.get("*", (req, res) => {
-//     res.sendFile(path.resolve(__dirname, "frontend", "dist", "index.html"));
-//   });
-// }
-
+// Start server and connect to MongoDB
 app.listen(PORT, () => {
-  console.log("Server is running on http://localhost:" + PORT);
+  console.log(`Server is running on port ${PORT}`);
   connectDB();
 });
