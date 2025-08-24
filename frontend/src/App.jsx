@@ -5,7 +5,7 @@ import SignUpPage from "./pages/SignUpPage";
 import LoginPage from "./pages/LoginPage";
 import AdminPage from "./pages/AdminPage";
 import CategoryPage from "./pages/CategoryPage";
-import Privacypolicy from "./pages/privacypolicy";
+import Privacypolicy from "./pages/Privacypolicy";
 import Termsandconditions from "./pages/Termsandconditions";
 import Contactus from "./pages/Contactus";
 import Cancellationandrefund from "./pages/Cancellationandrefund";
