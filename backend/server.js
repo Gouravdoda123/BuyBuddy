@@ -17,24 +17,31 @@ dotenv.config();
 const app = express();
 const PORT = process.env.PORT || 5000;
 
-// Middleware
 app.use(express.json({ limit: "10mb" }));
 app.use(cookieParser());
 
-// CORS configuration for frontend + localhost during dev
-const FRONTEND_URLS = [
-  "http://localhost:5173",
-  process.env.FRONTEND_URL // e.g., https://buy-buddy-neon.vercel.app
+// CORS for development and production (Vercel frontend)
+const allowedOrigins = [
+  "http://localhost:5173", 
+  "https://buy-buddy-neon.vercel.app"
 ];
 
 app.use(
   cors({
-    origin: FRONTEND_URLS,
+    origin: function(origin, callback) {
+      // allow requests with no origin (like Postman)
+      if (!origin) return callback(null, true);
+      if (allowedOrigins.indexOf(origin) === -1) {
+        const msg = `The CORS policy for this site does not allow access from the specified Origin.`;
+        return callback(new Error(msg), false);
+      }
+      return callback(null, true);
+    },
     credentials: true, // allow cookies
   })
 );
 
-// API Routes
+// Routes
 app.use("/api/auth", authRoutes);
 app.use("/api/products", productRoutes);
 app.use("/api/cart", cartRoutes);
@@ -42,8 +49,7 @@ app.use("/api/coupons", couponRoutes);
 app.use("/api/payments", paymentRoutes);
 app.use("/api/analytics", analyticsRoutes);
 
-// Start server and connect to MongoDB
 app.listen(PORT, () => {
-  console.log(`Server running on port ${PORT}`);
+  console.log(`Server running on http://localhost:${PORT}`);
   connectDB();
 });
